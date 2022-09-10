@@ -206,49 +206,42 @@ def download_img(img_url):
 
 
 # text = "fantasy world by Lisa Frank in unreal engine, cinematic ligthing, environmental concept art, matte painting" #@param {type:"string"}
-text = "fantasy world by Lisa Frank in unreal engine, cinematic ligthing, environmental concept art, matte painting" #@param {type:"string"}
+text = "yung girl" #@param {type:"string"}
 textos = text
-height =  500#@param {type:"number"}
+height = 500#@param {type:"number"}
 width =  500#@param {type:"number"}
-ancho=width
-alto=height
-model = "faceshq" #@param ["vqgan_imagenet_f16_16384", "vqgan_imagenet_f16_1024", "wikiart_1024", "wikiart_16384", "coco", "faceshq", "sflckr", "ade20k", "ffhq", "celebahq", "gumbel_8192"]
-_model=model
+selected_model = "vqgan_imagenet_f16_16384" #@param ["vqgan_imagenet_f16_16384", "vqgan_imagenet_f16_1024", "wikiart_1024", "wikiart_16384", "coco", "faceshq", "sflckr", "ade20k", "ffhq", "celebahq", "gumbel_8192"]
 interval_image =  20#@param {type:"number"}
-intervalo_imagenes = interval_image
 initial_image = ""#@param {type:"string"}
-imagen_inicial= initial_image
 objective_image = ""#@param {type:"string"}
-imagenes_objetivo = objective_image
 seed = -1#@param {type:"number"}
-max_iterations = 500#@param {type:"number"}
-max_iteraciones = max_iterations
+max_iterations = 1000#@param {type:"number"}
 input_images = ""
 
-numbers_models={"vqgan_imagenet_f16_16384": 'ImageNet 16384',"vqgan_imagenet_f16_1024":"ImageNet 1024", 
+models={"vqgan_imagenet_f16_16384": 'ImageNet 16384',"vqgan_imagenet_f16_1024":"ImageNet 1024", 
                  "wikiart_1024":"WikiArt 1024", "wikiart_16384":"WikiArt 16384", "coco":"COCO-Stuff", "faceshq":"FacesHQ", "sflckr":"S-FLCKR", "ade20k":"ADE20K", "ffhq":"FFHQ", "celebahq":"CelebA-HQ", "gumbel_8192": "Gumbel 8192"}
-selected_model = numbers_models[_model]     
-
-if _model == "gumbel_8192":
+useing_model = models[selected_model]     
+print(f'{useing_model} | {selected_model}')
+if selected_model == "gumbel_8192":
     is_gumbel = True
 else:
     is_gumbel = False
 
 if seed == -1:
     seed = None
-if imagen_inicial == "None":
-    imagen_inicial = None
-elif imagen_inicial and imagen_inicial.lower().startswith("http"):
-    imagen_inicial = download_img(imagen_inicial)
+if initial_image == "None":
+    initial_image = None
+elif initial_image and initial_image.lower().startswith("http"):
+    initial_image = download_img(initial_image)
 
 
-if imagenes_objetivo == "None" or not imagenes_objetivo:
-    imagenes_objetivo = []
+if objective_image == "None" or not objective_image:
+    objective_image = []
 else:
-    imagenes_objetivo = imagenes_objetivo.split("|")
-    imagenes_objetivo = [image.strip() for image in imagenes_objetivo]
+    objective_image = objective_image.split("|")
+    objective_image = [image.strip() for image in objective_image]
 
-if imagen_inicial or imagenes_objetivo != []:
+if initial_image or objective_image != []:
     input_images = True
 
 textos = [frase.strip() for frase in textos.split("|")]
@@ -258,19 +251,19 @@ if textos == ['']:
 
 args = argparse.Namespace(
     prompts=textos,
-    image_prompts=imagenes_objetivo,
+    image_prompts=objective_image,
     noise_prompt_seeds=[],
     noise_prompt_weights=[],
-    size=[ancho, alto],
-    init_image=imagen_inicial,
+    size=[width, height],
+    init_image=initial_image,
     init_weight=0.,
     clip_model='ViT-B/32',
-    vqgan_config=f'{_model}.yaml',
-    vqgan_checkpoint=f'{_model}.ckpt',
+    vqgan_config=f'{selected_model}.yaml',
+    vqgan_checkpoint=f'{selected_model}.ckpt',
     step_size=0.1,
     cutn=64,
     cut_pow=1.,
-    display_freq=intervalo_imagenes,
+    display_freq=interval_image,
     seed=seed,
 )
 
@@ -283,8 +276,8 @@ for prompt in text_prompts:
   print('Using device:', device)
   if textos:
       print('Using texts:', textos)
-  if imagenes_objetivo:
-      print('Using image prompts:', imagenes_objetivo)
+  if objective_image:
+      print('Using image prompts:', objective_image)
   if args.seed is None:
       seed = torch.seed()
   else:
@@ -362,8 +355,8 @@ for prompt in text_prompts:
       
       return clamp_with_grad(model.decode(z_q).add(1).div(2), 0, 1)
 
-  def add_xmp_data(nombrefichero):
-      imagen = ImgTag(filename=nombrefichero)
+  def add_xmp_data(file_name):
+      imagen = ImgTag(filename=file_name)
       imagen.xmp.append_array_item(libxmp.consts.XMP_NS_DC, 'creator', 'VQGAN+CLIP', {"prop_array_is_ordered":True, "prop_value_is_array":True})
       if args.prompts:
           imagen.xmp.append_array_item(libxmp.consts.XMP_NS_DC, 'title', " | ".join(args.prompts), {"prop_array_is_ordered":True, "prop_value_is_array":True})
@@ -434,7 +427,7 @@ for prompt in text_prompts:
       with tqdm() as pbar:
           while True:
               train(i)
-              if i == max_iteraciones:
+              if i == max_iterations:
                   break
               i += 1
               pbar.update()
